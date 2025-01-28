@@ -2,6 +2,7 @@ const std = @import("std");
 const log = std.log;
 
 const login_step = @import("./login.zig").login_step;
+const register_step = @import("./register.zig").register_step;
 
 pub fn main_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void { 
     // choose main action
@@ -21,6 +22,7 @@ pub fn main_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !
                 try login_step(args, allocator, instance);
                 return;
             } else if (std.mem.eql(u8, action, "r") or std.mem.eql(u8, action, "register")) { // branch register
+                try register_step(args, allocator, instance);
                 return;
             }
         }

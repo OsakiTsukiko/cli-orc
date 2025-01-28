@@ -13,6 +13,8 @@ pub const JSON = struct {
         password: []const u8,
     };
 
+    pub const Register = Login; // seaorc register JSON format
+
     pub const Token = struct { // seaorc token response JSON format
         user_token: []const u8,
     };
