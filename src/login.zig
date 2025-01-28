@@ -12,10 +12,8 @@ fn login(allocator: std.mem.Allocator, instance: []const u8, data: DJSON.Login) 
     const login_url = try std.fmt.allocPrint(allocator, "{s}/login", .{instance});
     defer allocator.free(login_url);
 
-    // turn into uri
-    // TODO: check if there is a way to make this also accept url's without http/https prefix!
-    const login_uri = try std.Uri.parse(instance);
-
+    log.debug("login url {s}", .{login_url});
+    
     // initialize zig http client
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
@@ -31,7 +29,7 @@ fn login(allocator: std.mem.Allocator, instance: []const u8, data: DJSON.Login) 
     // make POST request
     const res = try client.fetch(.{
         .location = .{
-            .uri = login_uri,
+            .url = login_url,
         },
         .method = .POST,
         .payload = payload,
@@ -49,12 +47,16 @@ fn login(allocator: std.mem.Allocator, instance: []const u8, data: DJSON.Login) 
     } 
 
     defer body.deinit(); // early deinit body if status was not successful
+
+    if (res.status == .not_found) { // 404 special case (for now)
+        log.err("Error logging in: {s}", .{"Not Found!"}); // log error
+        return error.silent; // silently exit (error already logged)
+    }
     
     const err = try json.parseFromSlice(DJSON.Error, allocator, body.items, .{}); // parse error
     defer err.deinit();
 
     log.err("Error logging in: {s}", .{err.value.err}); // log error
-    
     return error.silent; // silently exit (error already logged)
 }
 
