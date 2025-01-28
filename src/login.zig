@@ -13,7 +13,11 @@ fn login(allocator: std.mem.Allocator, instance: []const u8, data: DJSON.Login) 
     defer allocator.free(login_url);
 
     log.debug("login url {s}", .{login_url});
-    
+
+    // turn into uri
+    // TODO: check if there is a way to make this also accept url's without http/https prefix!
+    const login_uri = try std.Uri.parse(login_url);
+
     // initialize zig http client
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
@@ -29,7 +33,7 @@ fn login(allocator: std.mem.Allocator, instance: []const u8, data: DJSON.Login) 
     // make POST request
     const res = try client.fetch(.{
         .location = .{
-            .url = login_url,
+            .uri = login_uri,
         },
         .method = .POST,
         .payload = payload,
