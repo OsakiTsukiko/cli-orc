@@ -64,42 +64,36 @@ fn login(allocator: std.mem.Allocator, instance: []const u8, data: DJSON.Login) 
     return error.silent; // silently exit (error already logged)
 }
 
-pub fn login_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator, instance: []const u8) !void {
+pub fn login_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator, instance: []const u8, save_file: fs.File) !void {
     // login branch
-    if (args.next()) |filepath| { // filepath to save file
-        if (args.next()) |username| { // username 
+    if (args.next()) |username| { // username 
             if (args.next()) |password| { // password
 
-                // open or create save file
-                const save_file = try fs.cwd().createFile(filepath, .{}); // TODO: handle errors more gracefully
-                defer save_file.close();
+            // get result from http POST request to instance
+            const res = try login(allocator, instance, DJSON.Login{
+                .username = username,
+                .password = password,
+            });
+            defer res.deinit();
 
-                // get result from http POST request to instance
-                const res = try login(allocator, instance, DJSON.Login{
-                    .username = username,
-                    .password = password,
-                });
-                defer res.deinit();
+            // parse token from result
+            const token = try json.parseFromSlice(DJSON.Token, allocator, res.items, .{});
+            defer token.deinit();
 
-                // parse token from result
-                const token = try json.parseFromSlice(DJSON.Token, allocator, res.items, .{});
-                defer token.deinit();
+            // prepare save-data as JSON object
+            const save = DJSON.SaveData {
+                .instance = instance,
+                .token = token.value.user_token,
+            };
 
-                // prepare save-data as JSON object
-                const save = DJSON.SaveData {
-                    .instance = instance,
-                    .token = token.value.user_token,
-                };
+            // turn save-data into JSON string
+            const save_json = try json.stringifyAlloc(allocator, save, .{});
+            defer allocator.free(save_json);
 
-                // turn save-data into JSON string
-                const save_json = try json.stringifyAlloc(allocator, save, .{});
-                defer allocator.free(save_json);
+            // save into file
+            try save_file.writeAll(save_json);
 
-                // save into file
-                try save_file.writeAll(save_json);
-
-                return;
-            }
+            return;
         }
     }
 
