@@ -4,6 +4,7 @@ const fs = std.fs;
 const json = std.json;
 
 const DJSON = @import("./domain.zig").JSON;
+const Utils = @import("./utils.zig").Utils;
 
 fn register(allocator: std.mem.Allocator, instance: []const u8, data: DJSON.Register) !std.ArrayList(u8) {
     // register http POST function
@@ -97,5 +98,5 @@ pub fn register_step(args: *std.process.ArgIterator, allocator: std.mem.Allocato
         }
     }
 
-    log.err("Usage: ...", .{}); // TODO: add USAGE message
+    log.err("Usage: " ++ Utils.USAGE_REGISTER, .{});
 }

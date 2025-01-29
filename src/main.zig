@@ -5,6 +5,8 @@ const fs = std.fs;
 const login_step = @import("./login.zig").login_step;
 const register_step = @import("./register.zig").register_step;
 
+const Utils = @import("./utils.zig").Utils;
+
 pub fn main_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void { 
     // choose main action
     if (args.next()) |savefile_path| {
@@ -36,7 +38,7 @@ pub fn main_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !
         }
     }
     
-    log.err("Usage: ...", .{}); // TODO: add USAGE message
+    log.err("Usage: " ++ Utils.USAGE_GENERAL, .{});
 }
 
 pub fn main() !void {

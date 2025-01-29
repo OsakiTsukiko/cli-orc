@@ -4,6 +4,7 @@ const fs = std.fs;
 const json = std.json;
 
 const DJSON = @import("./domain.zig").JSON;
+const Utils = @import("./utils.zig").Utils;
 
 fn login(allocator: std.mem.Allocator, instance: []const u8, data: DJSON.Login) !std.ArrayList(u8) {
     // login http POST function
@@ -97,5 +98,5 @@ pub fn login_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator, 
         }
     }
 
-    log.err("Usage: ...", .{}); // TODO: add USAGE message
+    log.err("Usage: " ++ Utils.USAGE_LOGIN, .{});
 }
