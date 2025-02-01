@@ -38,4 +38,13 @@ pub const JSON = struct {
     pub const Receive = struct {
         messages: []General.Message,
     };
+
+    pub const SendReq = struct {
+        receiver: []const u8,
+        message: []const u8,
+    };
+
+    pub const SendRsp = struct {
+        msg_id: i64,
+    };
 };
