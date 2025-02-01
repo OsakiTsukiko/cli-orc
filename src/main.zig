@@ -6,6 +6,7 @@ const mem = std.mem;
 const login_step = @import("./login.zig").login_step;
 const register_step = @import("./register.zig").register_step;
 const receive_step = @import("./receive.zig").receive_step;
+const show_step = @import("./show.zig").show_step;
 
 const Utils = @import("./utils.zig").Utils;
 
@@ -16,10 +17,17 @@ pub fn main_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !
         if (args.next()) |action| {
             if (mem.eql(u8, action, "rcv") or mem.eql(u8, action, "receive")) {
                 const save_file = try fs.cwd().openFile(savefile_path, .{ .mode = .read_write }); // TODO: handle errors more gracefully
-                // open for read
+                // open for read and write
                 defer save_file.close();
 
                 try receive_step(args, allocator, save_file);
+                return;
+            } else if (mem.eql(u8, action, "sw") or mem.eql(u8, action, "show")) {
+                const save_file = try fs.cwd().openFile(savefile_path, .{ .mode = .read_only }); // TODO: handle errors more gracefully
+                // open for read
+                defer save_file.close();
+
+                try show_step(args, allocator, save_file);
                 return;
             } else {
                 // open or create save file
