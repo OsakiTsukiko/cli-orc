@@ -189,4 +189,5 @@ pub fn receive_step(_: *std.process.ArgIterator, allocator: std.mem.Allocator, s
     try save_file.seekTo(0);
     try save_file.writeAll(new_save_data_str);
     try save_file.setEndPos(@as(u64, @intCast(new_save_data_str.len)));
+    try save_file.seekTo(0);
 }

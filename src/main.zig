@@ -24,10 +24,11 @@ pub fn main_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !
                 try receive_step(args, allocator, save_file);
                 return;
             } else if (mem.eql(u8, action, "sw") or mem.eql(u8, action, "show")) {
-                const save_file = try fs.cwd().openFile(savefile_path, .{ .mode = .read_only }); // TODO: handle errors more gracefully
+                const save_file = try fs.cwd().openFile(savefile_path, .{ .mode = .read_write }); // TODO: handle errors more gracefully
                 // open for read
                 defer save_file.close();
 
+                try receive_step(args, allocator, save_file);
                 try show_step(args, allocator, save_file);
                 return;
             } else if (mem.eql(u8, action, "s") or mem.eql(u8, action, "send")) {
@@ -35,6 +36,7 @@ pub fn main_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !
                 // open for read and write
                 defer save_file.close();
 
+                try receive_step(args, allocator, save_file);
                 try send_step(args, allocator, save_file);
                 return;
             } else {
