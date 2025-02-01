@@ -178,7 +178,7 @@ pub fn receive_step(_: *std.process.ArgIterator, allocator: std.mem.Allocator, s
 
     const new_save_data_str = try json.stringifyAlloc(allocator, new_save_data, .{});
     defer allocator.free(new_save_data_str);
-    save_file.seekTo(0);
+    try save_file.seekTo(0);
     try save_file.writeAll(new_save_data_str);
 
 }
