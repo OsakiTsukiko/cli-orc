@@ -145,6 +145,14 @@ pub fn receive_step(_: *std.process.ArgIterator, allocator: std.mem.Allocator, s
         log.info("🔔 {s}: {d}", .{mg.sender, mg.messages.items.len});
     }
 
+     for (save_data.chats) |old_chat| {
+        if (in_list(msg_grouped_list.items, old_chat.other)) |mg_i| {
+            for (old_chat.messages) |msg| {
+                try msg_grouped_list.items[mg_i].messages.append(msg);
+            }   
+        }
+    }
+
     var new_save_data = DJSON.SaveData {
         .instance = instance,
         .token = token,
