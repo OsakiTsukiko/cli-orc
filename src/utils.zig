@@ -4,4 +4,5 @@ pub const Utils = struct {
     pub const USAGE_REGISTER = "cliorc path/to/save_file.json reg instance-url.com username password";
     pub const USAGE_RECEIVE = "cliorc path/to/save_file.json rcv"; // not really used
     pub const USAGE_SHOW = "cliorc path/to/save_file.json sw <user> <message_limit>"; // not really used
+    pub const USAGE_SEND = "cliorc path/to/save_file.json s receiver path/to/message_file.txt";
 };

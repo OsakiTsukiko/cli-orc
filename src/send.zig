@@ -182,5 +182,5 @@ pub fn send_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator, s
         }
     }
 
-    // USAGE
+    log.err("Usage: {s}", Utils.USAGE_SEND);
 }
