@@ -3,14 +3,16 @@ const log = std.log;
 const fs = std.fs;
 const json = std.json;
 const fmt = std.fmt;
+const mem = std.mem;
 
 const DJSON = @import("./domain.zig").JSON;
 const DGeneral = @import("./domain.zig").General;
 const Utils = @import("./utils.zig").Utils;
 
-const MsgSenderCnt = struct {
+const MessagesGrouped = struct {
     sender: []const u8,
-    counter: usize = 0,
+    messages: std.ArrayList(DGeneral.Message),
+    old_messages: []DGeneral.Message = &[_]DGeneral.Message{},
 };
 
 fn receive(allocator: std.mem.Allocator, instance: []const u8, token: []const u8) !std.ArrayList(u8) {
@@ -70,14 +72,14 @@ fn receive(allocator: std.mem.Allocator, instance: []const u8, token: []const u8
     return error.silent; // silently exit (error already logged)
 }
 
-pub fn in_list(list: []const MsgSenderCnt, sender: []const u8) bool {
-    for (list) |msc| {
-        if (std.mem.eql(u8, msc.sender, sender)) return true;
+pub fn in_list(list: []const MessagesGrouped, sender: []const u8) ?usize {
+    for (list, 0..) |mg, index| {
+        if (mem.eql(u8, mg.sender, sender)) return index;
     }
-    return false;
+    return null;
 }
 
-pub fn receive_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator, save_file: fs.File) !void {
+pub fn receive_step(_: *std.process.ArgIterator, allocator: std.mem.Allocator, save_file: fs.File) !void {
     const raw_data = try save_file.readToEndAlloc(allocator, 1024 * 1024 * 1024 * 4); 
     // max 4 gb in memory (should be enough for now)
     defer allocator.free(raw_data);
@@ -86,8 +88,10 @@ pub fn receive_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator
     const data = try json.parseFromSlice(DJSON.SaveData, allocator, raw_data, .{});
     defer data.deinit();
 
-    const instance = data.value.instance;
-    const token = data.value.token;
+    const save_data = data.value;
+
+    const instance = save_data.instance;
+    const token = save_data.token;
 
     var body = try receive(allocator, instance, token);
     defer body.deinit();
@@ -99,30 +103,82 @@ pub fn receive_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator
 
     log.info("✉️  Received {d} messages!", .{received_messages.len});
 
-    var msg_by_sender = std.ArrayList(MsgSenderCnt).init(allocator);
-    defer msg_by_sender.deinit();
+    var msg_grouped_list = std.ArrayList(MessagesGrouped).init(allocator);
+    defer msg_grouped_list.deinit();
 
-    for (received_messages) |rm| {
-        if (in_list(msg_by_sender.items, rm.sender)) {
-            for (msg_by_sender.items, 0..) |msc, index| {
-                if (std.mem.eql(u8, msc.sender, rm.sender)) {
-                    msg_by_sender.items[index].counter += 1;
-                    break;
-                }
-            }
+    defer {
+        for (msg_grouped_list.items) |mg| {
+            mg.messages.deinit();
+        }
+    }
+
+    for (0..received_messages.len) |other_index| { // reverse messages (kinda)
+        const index = received_messages.len - other_index - 1;
+        const message = received_messages[index];
+
+        if (in_list(msg_grouped_list.items, message.sender)) |msg_idx| {
+            try msg_grouped_list.items[msg_idx].messages.append(message);
         } else {
-            try msg_by_sender.append(
-                MsgSenderCnt {
-                    .sender = rm.sender,
-                    .counter = 1, 
-                }
+            var mg = MessagesGrouped {
+                .sender = message.sender,
+                .messages = std.ArrayList(DGeneral.Message).init(allocator),       
+            };
+            try mg.messages.append(message);
+            try msg_grouped_list.append(
+                mg
             );
         }
     }
 
-    for (msg_by_sender.items) |msc| {
-        log.info("🔔 {s}: {d}", .{msc.sender, msc.counter});
+    var new_chats: usize = 0;
+    for (msg_grouped_list.items, 0..) |mg, i| {
+        for (save_data.chats) |chat| {
+            if (mem.eql(u8, mg.sender, chat.other)) {
+                msg_grouped_list.items[i].old_messages = chat.messages;
+                break;
+            }
+        }
+        if (msg_grouped_list.items[i].old_messages.len == 0) { new_chats += 1; }
     }
 
-    _ = args;
+    for (msg_grouped_list.items) |mg| {
+        log.info("🔔 {s}: {d}", .{mg.sender, mg.messages.items.len});
+    }
+
+    var new_save_data = DJSON.SaveData {
+        .instance = instance,
+        .token = token,
+        .chats = &[_]DGeneral.Chat{},
+    };
+
+    new_save_data.chats = try allocator.alloc(DGeneral.Chat, save_data.chats.len + new_chats);
+    defer allocator.free(new_save_data.chats);
+
+    for (save_data.chats, 0..) |old_chat, i| {
+        if (in_list(msg_grouped_list.items, old_chat.other)) |mg_i| {
+            new_save_data.chats[i] = DGeneral.Chat {
+                .other = old_chat.other,
+                .messages = msg_grouped_list.items[mg_i].messages.items,
+            };
+        } else {
+            new_save_data.chats[i] = old_chat;
+        }
+    }
+
+    var i = save_data.chats.len;
+    for (msg_grouped_list.items) |mg| {
+        if (mg.old_messages.len == 0) {
+            new_save_data.chats[i] = DGeneral.Chat {
+                .other = mg.sender,
+                .messages = mg.messages.items,
+            };
+            i += 1;
+        }
+    }
+
+    const new_save_data_str = try json.stringifyAlloc(allocator, new_save_data, .{});
+    defer allocator.free(new_save_data_str);
+    save_file.seekTo(0);
+    try save_file.writeAll(new_save_data_str);
+
 }

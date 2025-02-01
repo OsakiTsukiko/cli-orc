@@ -15,7 +15,7 @@ pub fn main_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !
 
         if (args.next()) |action| {
             if (mem.eql(u8, action, "rcv") or mem.eql(u8, action, "receive")) {
-                const save_file = try fs.cwd().openFile(savefile_path, .{}); // TODO: handle errors more gracefully
+                const save_file = try fs.cwd().openFile(savefile_path, .{ .mode = .read_write }); // TODO: handle errors more gracefully
                 // open for read
                 defer save_file.close();
 
