@@ -52,6 +52,8 @@ pub fn show_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator, s
         log.err("No chat with user {s} found!", .{other});
         return;
     } else {
+        log.info("Usage: {s}", .{Utils.USAGE_SHOW});
+        log.info("Try piping into less (` | less` after the command) for big message limit.", .{});
         try stdout.print("+ CHATS +\n", .{});
         for (chats) |chat| {
             try stdout.print("{s}: {d} messasges\n", .{chat.other, chat.messages.len});
