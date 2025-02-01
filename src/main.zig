@@ -1,9 +1,11 @@
 const std = @import("std");
 const log = std.log;
 const fs = std.fs;
+const mem = std.mem;
 
 const login_step = @import("./login.zig").login_step;
 const register_step = @import("./register.zig").register_step;
+const receive_step = @import("./receive.zig").receive_step;
 
 const Utils = @import("./utils.zig").Utils;
 
@@ -11,28 +13,38 @@ pub fn main_step(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !
     // choose main action
     if (args.next()) |savefile_path| {
 
-        // open or create save file
-        const save_file = try fs.cwd().createFile(savefile_path, .{}); // TODO: handle errors more gracefully
-        defer save_file.close();
-
         if (args.next()) |action| {
-            if (args.next()) |raw_instance| {
-                // for login and register get the instance
+            if (mem.eql(u8, action, "rcv") or mem.eql(u8, action, "receive")) {
+                const save_file = try fs.cwd().openFile(savefile_path, .{}); // TODO: handle errors more gracefully
+                // open for read
+                defer save_file.close();
 
-                var buff: [1024]u8 = undefined; // create buffer for prefixed url
-                var instance: []const u8 = raw_instance; // set instance to raw instance 
+                try receive_step(args, allocator, save_file);
+                return;
+            } else {
+                // open or create save file
+                const save_file = try fs.cwd().createFile(savefile_path, .{}); // TODO: handle errors more gracefully
+                // open for write
+                defer save_file.close();
 
-                if (!std.mem.startsWith(u8, instance, "http://") and !std.mem.startsWith(u8, instance, "https://")) {
-                    // if instance is not prefixed with http:// pr https:// 
-                    instance = try std.fmt.bufPrint(&buff, "http://{s}", .{instance});
-                }
+                if (args.next()) |raw_instance| {
+                    // for login and register get the instance
 
-                if (std.mem.eql(u8, action, "l") or std.mem.eql(u8, action, "login")) { // branch login
-                    try login_step(args, allocator, instance, save_file);
-                    return;
-                } else if (std.mem.eql(u8, action, "r") or std.mem.eql(u8, action, "register")) { // branch register
-                    try register_step(args, allocator, instance, save_file);
-                    return;
+                    var buff: [1024]u8 = undefined; // create buffer for prefixed url
+                    var instance: []const u8 = raw_instance; // set instance to raw instance 
+
+                    if (!mem.startsWith(u8, instance, "http://") and !std.mem.startsWith(u8, instance, "https://")) {
+                        // if instance is not prefixed with http:// pr https:// 
+                        instance = try std.fmt.bufPrint(&buff, "http://{s}", .{instance});
+                    }
+
+                    if (mem.eql(u8, action, "l") or std.mem.eql(u8, action, "login")) { // branch login
+                        try login_step(args, allocator, instance, save_file);
+                        return;
+                    } else if (mem.eql(u8, action, "reg") or std.mem.eql(u8, action, "register")) { // branch register
+                        try register_step(args, allocator, instance, save_file);
+                        return;
+                    }
                 }
             }
         }

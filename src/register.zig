@@ -4,6 +4,7 @@ const fs = std.fs;
 const json = std.json;
 
 const DJSON = @import("./domain.zig").JSON;
+const DGeneral = @import("./domain.zig").General;
 const Utils = @import("./utils.zig").Utils;
 
 fn register(allocator: std.mem.Allocator, instance: []const u8, data: DJSON.Register) !std.ArrayList(u8) {
@@ -85,6 +86,7 @@ pub fn register_step(args: *std.process.ArgIterator, allocator: std.mem.Allocato
             const save = DJSON.SaveData {
                 .instance = instance,
                 .token = token.value.user_token,
+                .chats = &[_]DGeneral.Chat{},
             };
 
             // turn save-data into JSON string
