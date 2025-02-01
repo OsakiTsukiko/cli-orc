@@ -4,10 +4,10 @@
 > [!TIP]
 > Currently on ZIG 0.13.0
 ```bash
-git clone https://github.com/OsakiTsukiko/cli-orc
-cd cli-orc
+git clone https://github.com/OsakiTsukiko/cliorc
+cd cliorc
 zig build
-./zig-out/bin/cli-orc # arguments...
+./zig-out/bin/cliorc # arguments...
 # or
 zig build run -- # arguments...
 ```
